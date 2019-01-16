@@ -1,0 +1,1 @@
+print(java.util.UUID.nameUUIDFromBytes("0x838ef9e420e08996b2adc9a4ca768cb562fc584f553a6414201d75476e97c8b2".getBytes()).getMostSignificantBits)
