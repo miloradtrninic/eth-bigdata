@@ -1,53 +1,66 @@
 from kafka import KafkaProducer
 import kafka.errors
-import json
-import websocket
-from web3.auto import Web3
-from web3 import providers
+import asyncio
 import os
-import time
+import json
+from web3 import Web3, WebsocketProvider
+from hexbytes import HexBytes
+
 try:
     import thread
 except ImportError:
     import _thread as thread
 import time
 
-WS_SERVER = 'wss://kovan.infura.io/ws'
-SUB_MSG = '{"jsonrpc":"2.0", "id": 1, "method": "eth_subscribe", "params": ["newPendingTransactions"]}'
 TOPIC = 'ethereum'
+
+class HexJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, HexBytes):
+            return obj.hex()
+        return super().default(obj)
 
 
 while True:
     try:
-        #producer = KafkaProducer(bootstrap_servers=os.environ['KAFKA_HOST'])
+        producer = KafkaProducer(bootstrap_servers=os.environ['KAFKA_HOST'])
         print("Connected to Kafka!")
         break
     except kafka.errors.NoBrokersAvailable as e:
         print(e)
         time.sleep(3)
 
-def on_message(ws, message):
 
-    tx = json.loads(message)
-    print(tx['params']['result'])
-    print(web3.eth.getTransaction(tx['params']['result']))
-    #producer.send(TOPIC, value=json.dumps(tx[u'x']), key=str(tx[u'x'][u'hash']))
-    # print(message)
+def on_message(transaction, w3):
+    tx = w3.eth.getTransaction(transaction)
+    tx_dict = dict(tx)
+    tx_json = json.dumps(tx_dict, cls=HexJsonEncoder)
+    if os.environ['LOG_LEVEL'] == 'debug':
+        print(tx_json)
+    producer.send(TOPIC, value=json.dumps(tx_json).encode('utf-8'))
+
+
+
+
+async def log_loop(event_filter, poll_interval, w3):
+    print("Pokrenuo loop")
+    while True:
+        for event in w3.eth.getFilterChanges(event_filter.filter_id):
+            on_message(event, w3)
+        await asyncio.sleep(poll_interval)
 
 
 if __name__ == "__main__":
 
-    web3 = Web3(providers.WebsocketProvider("wss://mainnet.infura.io/_ws/"))
-    web3_pending_filter = web3.eth.filter('pending')
-    while True:
-        transaction_list = web3_pending_filter.get_new_entries()
-        transactions = [(web3.eth.getTransaction(h)) for h in transaction_list if h is not None]
-        [print(tx) for tx in transactions if tx is not None]
+    w3 = Web3(WebsocketProvider("wss://rinkeby.infura.io/ws/v3/9b275464869943289e5cfc330547c4c9", websocket_kwargs={'timeout': 120}))
+    print("Connected to RPC")
+    print(w3.eth.blockNumber)
+    web3_pending_filter = w3.eth.filter('pending')
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(
+            asyncio.gather(
+                log_loop(web3_pending_filter, 2, w3)))
+    finally:
+        loop.close()
 
-    # ws = websocket.WebSocketApp(WS_SERVER,
-    #                             on_message=on_message,
-    #                             on_error=on_error,
-    #                             on_close=on_close)
-    # ws.on_open = on_open
-    # ws.run_forever()
-    # websocket.enableTrace(True)

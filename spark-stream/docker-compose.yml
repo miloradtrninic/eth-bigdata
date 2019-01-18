@@ -1,5 +1,28 @@
 version: '2' 
 services:
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    ports:
+      - "9094:9094"
+    environment:
+      HOSTNAME_COMMAND: "docker info | grep ^Name: | cut -d' ' -f 2"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://_{HOSTNAME_COMMAND}:9094
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - zookeeper
+      - namenode
+
   namenode:
     image: bde2020/hadoop-namenode:1.1.0-hadoop2.8-java8
     volumes:
@@ -45,28 +68,13 @@ services:
       - ./hadoop.env
     ports:
       - 9001:9001
-  hue:
-    image: bde2020/hdfs-filebrowser:3.11
-    ports:
-      - 8088:8088
-    environment:
-      - NAMENODE_HOST=namenode
   ### PRODUCER
   producer:
     build: ./producer
     environment:
       KAFKA_HOST: kafka:9092
+      LOG_LEVEL: debug
     depends_on: 
       - kafka
       - namenode
       
-  ### CONSUMER
-  consumer:
-    build: ./consumer
-    environment:
-      KAFKA_HOST: kafka:9092
-      HDFS_HOST: http://namenode:50070
-    depends_on: 
-      - kafka
-      - producer
-      - namenode

@@ -1,3 +1,4 @@
 websocket-client
 kafka-python
 web3
+attributedict

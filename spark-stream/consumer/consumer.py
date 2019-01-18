@@ -7,9 +7,9 @@ import sys
 import time
 import json
 
-TOPIC = 'bitcoin'
+TOPIC = 'ethereum'
 MAX_TRANSACTIONS = 1000
-BITCOIN_DIR = '/user/root/bitcoin'
+DIR = '/user/root/bitcoin'
 PENDING_PATH = '/csv/pending.csv'
 
 
@@ -18,44 +18,30 @@ def connect_to_hdfs():
 
 
 def upload_to_hdfs(hdfs, content, format):
-    filename = BITCOIN_DIR + format[1:] + '/pending_' + \
-        str(time.time()).split('.')[0]
+    filename = DIR + format[1:] + '/pending_' + \
+               str(time.time()).split('.')[0]
     print("writing " + filename + " ...")
     hdfs.write(filename + format, data=content, encoding="utf-8")
 
 
 def transform(tx):
-    rows = []
 
-    tx_hash = tx["hash"]
-    time = str(tx["time"])
-    tx_index = str(tx["tx_index"])
+    row = ','.join([tx["blockHash"], tx['from'], tx['to'], tx['value']])
 
-    for i in tx["inputs"]:
-        addr = i["prev_out"]["addr"]
-        addr = addr if addr != None else "None"
-        value = str(i["prev_out"]["value"])
-        rows.append(','.join([tx_index, tx_hash, time, "input", addr, value]))
-
-    for o in tx["out"]:
-        addr = o["addr"]
-        addr = addr if addr != None else "None"
-        value = str(o["value"])
-        rows.append(','.join([tx_index, tx_hash, time, "output", addr, value]))
-
-    return '\n'.join(rows)
+    return row
 
 
 def handle_msg(transactions, msg):
     transactions.append(json.loads(msg.value))
-    if (len(transactions) > MAX_TRANSACTIONS):
+
+    if len(transactions) > MAX_TRANSACTIONS:
         content = "\n".join([transform(tx) for tx in transactions]) + "\n"
         pending_new_path = '/csv/pending_new.csv'
-        hdfs.write(BITCOIN_DIR + pending_new_path,
+        hdfs.write(DIR + pending_new_path,
                    data=content, encoding='utf-8')
 
-        concat_path = "http://namenode:50070/webhdfs/v1" + BITCOIN_DIR + \
-            PENDING_PATH + "?op=CONCAT&sources=" + BITCOIN_DIR + pending_new_path
+        concat_path = "http://namenode:50070/webhdfs/v1" + DIR + \
+                      PENDING_PATH + "?op=CONCAT&sources=" + DIR + pending_new_path
         r = requests.post(concat_path)
         print(r.status_code, r.reason)
 
@@ -68,7 +54,7 @@ def consume(hdfs, consumer):
     transactions = []
 
     try:
-        hdfs.write(BITCOIN_DIR + PENDING_PATH,
+        hdfs.write(DIR + PENDING_PATH,
                    data="", encoding="utf-8")
     except:
         pass
@@ -95,7 +81,7 @@ if __name__ == '__main__':
     hdfs = connect_to_hdfs()
     # hdfs.delete(BITCOIN_DIR, recursive=True)
     try:
-        hdfs.makedirs(BITCOIN_DIR)
+        hdfs.makedirs(DIR)
     except:
         pass
 

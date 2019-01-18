@@ -123,6 +123,7 @@ spark-batch/data/*
 
 spark-stream/.idea/*
 spark-stream/data/*
+spark-stream/target/*
 spark-stream/producer/.idea/*
 spark-stream/producer/venv3/*
 spark-stream/consumer/venv/*

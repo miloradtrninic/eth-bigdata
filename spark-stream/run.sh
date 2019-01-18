@@ -1,7 +1,1 @@
-$HADOOP_PREFIX/bin/hdfs dfs -mkdir /maxbyweek
-
-$HADOOP_PREFIX/bin/hdfs dfs -mkdir /mostconnected
-
-$HADOOP_PREFIX/bin/hdfs dfs -put maxbyweek/transactions.csv /maxbyweek/
-
-$HADOOP_PREFIX/bin/hdfs dfs -put maxbyweek/blocks.csv /maxbyweek/
+$SPARK_HOME/bin/spark-submit --class org.bigdata.SparkStreaming /bigdata-1.0-SNAPSHOT-jar-with-dependencies.jar 
