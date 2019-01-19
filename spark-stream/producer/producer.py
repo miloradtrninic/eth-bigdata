@@ -33,11 +33,12 @@ while True:
 
 def on_message(transaction, w3):
     tx = w3.eth.getTransaction(transaction)
-    tx_dict = dict(tx)
-    tx_json = json.dumps(tx_dict, cls=HexJsonEncoder)
-    if os.environ['LOG_LEVEL'] == 'debug':
-        print(tx_json)
-    producer.send(TOPIC, value=json.dumps(tx_json).encode('utf-8'))
+    if tx is not None:
+        tx_dict = dict(tx)
+        tx_json = json.dumps(tx_dict, cls=HexJsonEncoder)
+        if os.environ['LOG_LEVEL'] == 'debug':
+            print(tx_json)
+        producer.send(TOPIC, value=json.dumps(tx_json).encode('utf-8'))
 
 
 

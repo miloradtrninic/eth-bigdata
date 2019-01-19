@@ -46,7 +46,6 @@ object MostConnectedAddresses {
           }
         },
         (a, b) => math.min(a, b))
-      // Print out the first 100 results:
       bfs.vertices.join(vertices).saveAsTextFile("hdfs://namenode:8020/mostconnected/degreesofseparation")
     }
 
