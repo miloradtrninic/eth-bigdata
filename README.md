@@ -15,4 +15,4 @@ Spark batch
 Spark streaming
 - first Start docker containers from `/spark-stream` folder using `docker-compose up`.
 - second Build application using maven build tool. 
-- 
+- Run `run.sh`
